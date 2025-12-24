@@ -1,0 +1,2 @@
+If you close the project, you must reactivate the virtual environment with
+    .\venv\Scripts\Activate.ps1
