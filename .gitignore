@@ -9,3 +9,6 @@ __pycache__/
 # flask / environment stuff
 instance/
 .env
+
+# database instance
+instance/
