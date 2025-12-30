@@ -12,3 +12,11 @@ instance/
 
 # database instance
 instance/
+
+# react stuff
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+/build

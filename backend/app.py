@@ -1,6 +1,6 @@
 # run da app broh
-from flask import Flask
-from backend.models import db
+from flask import Flask, jsonify
+from models import db
 
 app = Flask(__name__)
 
@@ -11,9 +11,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # hook to app
 db.init_app(app)
 
-@app.get("/")
-def home():
-    return "Running Help Desk Simulator"
+@app.get("/api/health")
+def health():
+    return jsonify(status="ok")
 
 if __name__ == "__main__":
     with app.app_context():
