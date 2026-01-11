@@ -1,20 +1,19 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import UserHome from "./pages/UserHome";
+import TechHome from "./pages/TechHome";
 
 function App() {
-  const [status, setStatus] = useState ("loading...");
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/health")
-      .then((r) => r.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus("error"));
-  }, []);
-
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Help Desk Simulator</h1>
-      <p>Backend status: {status}</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/user" element={<UserHome />} />
+        <Route path="/tech" element={<TechHome />} />
+        <Route path="/" element={<Navigate to="/login" replace /> } />
+        <Route path="*" element={<Navigate to="/login" replace /> } />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
