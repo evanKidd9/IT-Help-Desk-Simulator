@@ -1,6 +1,6 @@
 // Login Page
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function Login() {
     const nav = useNavigate();
@@ -68,6 +68,10 @@ function Login() {
 
                 <button style={{ padding: "8px 12px" }} type="submit">Sign In</button>
             </form>
+
+            <p style={{ marginTop: 12 }}>
+                You new here? <Link to="/signup">Create an account!</Link>
+            </p>
         </div>
     );
 }

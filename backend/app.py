@@ -1,6 +1,7 @@
 # run da app broh
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
+from sqlalchemy.exc import IntegrityError
 from models import db, User
 from functools import wraps
 import jwt
@@ -81,6 +82,36 @@ def login():
     token = jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
 
     return jsonify(token=token, role=user.role, username=user.username)
+
+@app.post("/api/auth/signup")
+def signup():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+
+    # validation
+    if len(username) < 4:
+        return jsonify(error="Username too short, must be at least 4 characters")
+    if len(password) < 10:
+        return jsonify(error="Password too short, must be at least 10 characters")
+    
+    # create user, default role will be "user"
+    user = User(
+        username = username,
+        password_hash = generate_password_hash(password),
+        role = "user"
+    )
+
+    db.session.add(user)
+
+    # try to add the user to the database
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(error="Username is already taken"), 409
+    
+    return jsonify(message="Account successfully created!! You may log in now")
 
 if __name__ == "__main__":
     with app.app_context():
