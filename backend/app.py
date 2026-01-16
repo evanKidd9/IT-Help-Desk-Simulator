@@ -7,6 +7,7 @@ from functools import wraps
 import jwt
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import re # regex
 
 app = Flask(__name__)
 
@@ -18,6 +19,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$") # for validating email input
 
 def require_auth(required_role=None):
     def decorator(fn):
@@ -87,17 +90,21 @@ def login():
 def signup():
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
     password = data.get("password") or ""
 
     # validation
     if len(username) < 4:
-        return jsonify(error="Username too short, must be at least 4 characters")
+        return jsonify(error="Username too short, must be at least 4 characters"), 400
+    if not EMAIL_RE.match(email):
+        return jsonify(error="Please enter a valid email address"), 400
     if len(password) < 10:
-        return jsonify(error="Password too short, must be at least 10 characters")
+        return jsonify(error="Password too short, must be at least 10 characters"), 400
     
     # create user, default role will be "user"
     user = User(
         username = username,
+        email=email,
         password_hash = generate_password_hash(password),
         role = "user"
     )
@@ -109,7 +116,7 @@ def signup():
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify(error="Username is already taken"), 409
+        return jsonify(error="Username or email is already taken"), 409
     
     return jsonify(message="Account successfully created!! You may log in now")
 
