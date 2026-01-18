@@ -8,12 +8,15 @@ import jwt
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import re # regex
+import os
 
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = "dev-change-me"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///helpdesk.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+app.config["TECH_INVITE_CODE"] = os.environ.get("TECH_INVITE_CODE", "DEV-TECH-CODE")
 
 # hook to app
 db.init_app(app)
@@ -93,6 +96,9 @@ def signup():
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
 
+    is_tech = bool(data.get("isTech"))
+    tech_code = (data.get("techCode") or "").strip()
+
     # validation
     if len(username) < 4:
         return jsonify(error="Username too short, must be at least 4 characters"), 400
@@ -101,12 +107,22 @@ def signup():
     if len(password) < 10:
         return jsonify(error="Password too short, must be at least 10 characters"), 400
     
+    print("JSON received:", request.get_json())
+    print("Expected tech code:", repr(app.config["TECH_INVITE_CODE"]))
+    print("Received:", repr((request.get_json() or {}).get("techCode")))
+
+    role = "user"
+    if is_tech:
+        if tech_code != app.config["TECH_INVITE_CODE"]:
+            return jsonify(error="Invalid tech invite code."), 403
+        role = "tech"
+
     # create user, default role will be "user"
     user = User(
         username = username,
         email=email,
         password_hash = generate_password_hash(password),
-        role = "user"
+        role = role
     )
 
     db.session.add(user)

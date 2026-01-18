@@ -11,7 +11,10 @@ function Signup() {
 
     const [msg, setMsg] = useState("");
     const [err, setErr] = useState("");
-    const [loading, setLoading] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const [isTech, setIsTech] = useState(false);
+    const [techCode, setTechCode] = useState("");
 
     function validateEmail(value) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -21,7 +24,6 @@ function Signup() {
         e.preventDefault();
         setErr("");
         setMsg("");
-        setLoading(false);
 
         if (!validateEmail(email.trim())) {
             setErr("Please enter a valid email address");
@@ -38,16 +40,25 @@ function Signup() {
             return;
         }
 
+        if (isTech && techCode.trim().length === 0) {
+            setErr("Tech invite code is required for technician accounts")
+            return;
+        }
+
         setLoading(true);
 
         try {
+            console.log("Submitting:", { isTech, techCode });
             const res = await fetch("http://127.0.0.1:5000/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    username: username.trim(), 
+                    username: username.trim(),
                     email: email.trim(),
-                    password }),
+                    password,
+                    isTech,
+                    techCode: techCode.trim(),
+                }),
             });
 
             const data = await res.json().catch(() => ({}));
@@ -111,6 +122,31 @@ function Signup() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         autoComplete="new-password"/>
                 </div>
+
+                <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input 
+                            type="checkbox"
+                            checked={isTech}
+                            onChange={(e) => {
+                                const checked = e.target.checked;
+                                setIsTech(checked);
+                                if (!checked) setTechCode("");
+                            }}
+                            /> Create as Tech Account
+                    </label>
+                </div>
+
+                {isTech && (
+                    <div style={{ marginBottom: 12 }}>
+                        <label>Tech Invite Code</label>
+                        <input   
+                            style={{ width: "100%", padding: 8 }}
+                            value={techCode}
+                            onChange={(e) => setTechCode(e.target.value)}
+                            autoComplete="off"/>
+                    </div>
+                )}
 
                 {err && <p style={{ color: "crimson" }}>{err}</p>}
                 {msg && <p style={{ color: "green" }}>{msg}</p>}
