@@ -4,11 +4,13 @@ from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from models import db, User, Ticket
 from functools import wraps
+from flask_migrate import Migrate
 import jwt
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import re # regex
 import os
+
 
 app = Flask(__name__)
 
@@ -20,6 +22,7 @@ app.config["TECH_INVITE_CODE"] = os.environ.get("TECH_INVITE_CODE", "DEV-TECH-CO
 
 # hook to app
 db.init_app(app)
+migrate = Migrate(app, db)
 
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 

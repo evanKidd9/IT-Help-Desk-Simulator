@@ -19,6 +19,7 @@ class Ticket(db.Model):
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(10), nullable=False)
     status = db.Column(db.String(20), default="Open")
+    progress = db.Column(db.Integer, nullable=False, server_default="0")
 
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     created_at = db.Column(db.DateTime, server_default=db.func.now())
