@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
-from models import db, User
+from models import db, User, Ticket
 from functools import wraps
 import jwt
 import datetime
@@ -34,15 +34,20 @@ def require_auth(required_role=None):
                 return jsonify(error="Missing Token"), 401
             
             token = auth.split(" ", 1)[1].strip()
+
+            print("AUTH header:", repr(auth))
+            print("Token extracted:", repr(token))
+
             try:
                 payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
             except jwt.ExpiredSignatureError:
                 return jsonify(error="Expired token"), 401
-            except jwt.InvalidTokenError:
+            except jwt.InvalidTokenError as e:
+                print("JWT decode error:", e)
                 return jsonify(error="Invalid token"), 401
             
             # store on request context
-            g.user_id = payload.get("sub")
+            g.user_id = int(payload.get("sub"))
             g.username = payload.get("username")
             g.role = payload.get("role")
 
@@ -79,11 +84,10 @@ def login():
         return jsonify(error="Incorrect username of password"), 401
     
     payload = {
-        "sub": user.id,
+        "sub": str(user.id),
         "username": user.username,
         "role": user.role,
-        "exp": datetime.datetime.now(datetime.timezone.utc)
-           + datetime.timedelta(hours=6)
+        "exp": int((datetime.datetime.utcnow() + datetime.timedelta(hours=6)).timestamp())
     }
     token = jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
 
@@ -135,6 +139,44 @@ def signup():
         return jsonify(error="Username or email is already taken"), 409
     
     return jsonify(message="Account successfully created!! You may log in now")
+
+@app.post("/api/tickets")
+@require_auth("user")
+def create_ticket():
+    data = request.get_json(silent=True) or {}
+    
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()
+    priority = (data.get("priority") or "Low").strip()
+
+    if len(title) < 5:
+        return jsonify(error="Title must be at least 5 characters long"), 400
+    if len(description) < 10:
+        return jsonify(error="Description must be at least 10 characters"), 400
+    if priority not in { "Low", "Medium", "High" }:
+        return jsonify(error="Ticket must have a priority level"), 400
+    
+    # make the ticket
+    ticket = Ticket (
+        title=title,
+        description=description,
+        priority=priority,
+        status="open",
+        created_by=g.user_id
+    )
+    db.session.add(ticket)
+    db.session.commit()
+
+    return jsonify(
+        message="Ticket successfully created!",
+        ticket={
+            "id": ticket.id,
+            "title": ticket.title,
+            "priority": ticket.priority,
+            "status": ticket.status
+        }
+    ), 201
+
 
 if __name__ == "__main__":
     with app.app_context():
