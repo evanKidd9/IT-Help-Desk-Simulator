@@ -1,5 +1,5 @@
 // Home page for users
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 function TicketCard({ t }) {
@@ -57,10 +57,23 @@ function TicketCard({ t }) {
 
 function UserHome() {
   const username = localStorage.getItem("username") || "user";
+  const nav = useNavigate();
 
   const [tickets, setTickets] = useState([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  function handleLogout() {
+    setLoggingOut(true);
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("username");
+    setTimeout(() => {
+        nav("/login");
+    }, 900);
+  }
 
   useEffect(() => {
     async function loadTickets() {
@@ -115,10 +128,26 @@ function UserHome() {
         >
           <h2>Welcome, {username}</h2>
 
-          <p style={{ marginTop: 8 }}>
-            <Link to="/user/submit-ticket">Submit a new Ticket</Link>
-          </p>
+        <Link to="/user/submit-ticket">
+          <button style={{
+            width: "100%", padding: "10px 12px", borderRadius: 8, border: "none",
+            background: "#1976d2", color: "#fff", cursor: "pointer", fontWeight: 600}}>
+                Submit a new Ticket
+          </button>
+        </Link>
 
+        <button onClick={handleLogout} style={{
+            marginTop: 16, width: "100%", padding: "8px 12px", borderRadius: 8,
+            border: "1px solid #ccc", background: "#f30f0f", cursor: "pointer", color: "#fff"
+          }}>
+            Logout
+          </button>
+
+          {loggingOut && (
+            <p style={{ color: "green", textAlign: "center", marginTop: 8 }}>
+                Logging out now...
+            </p>
+          )}
           <p style={{ opacity: 0.8, fontSize: 17, marginTop: 12 }}>
             More functionality will be added here later
           </p>
