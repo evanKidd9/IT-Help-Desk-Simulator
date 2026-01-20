@@ -147,7 +147,7 @@ def signup():
 @require_auth("user")
 def create_ticket():
     data = request.get_json(silent=True) or {}
-    
+
     title = (data.get("title") or "").strip()
     description = (data.get("description") or "").strip()
     priority = (data.get("priority") or "Low").strip()
@@ -156,17 +156,17 @@ def create_ticket():
         return jsonify(error="Title must be at least 5 characters long"), 400
     if len(description) < 10:
         return jsonify(error="Description must be at least 10 characters"), 400
-    if priority not in { "Low", "Medium", "High" }:
+    if priority not in {"Low", "Medium", "High"}:
         return jsonify(error="Ticket must have a priority level"), 400
-    
-    # make the ticket
-    ticket = Ticket (
+
+    ticket = Ticket(
         title=title,
         description=description,
         priority=priority,
-        status="open",
+        status="Open",
         created_by=g.user_id
     )
+
     db.session.add(ticket)
     db.session.commit()
 
@@ -180,6 +180,28 @@ def create_ticket():
         }
     ), 201
 
+@app.get("/api/tickets/mine")
+@require_auth("user")
+def my_tickets():
+    tickets = (
+        Ticket.query
+        .filter_by(created_by=g.user_id)
+        .order_by(Ticket.id.desc())
+        .all()
+    )
+
+    return jsonify(items=[
+        {
+            "id": t.id,
+            "title": t.title,
+            "priority": t.priority,
+            "status": t.status,
+            "progress": getattr(t, "progress", 0) or 0,
+            "created_by": t.created_by
+        }
+        for t in tickets
+    ]), 200
+
 
 if __name__ == "__main__":
     with app.app_context():
@@ -187,14 +209,16 @@ if __name__ == "__main__":
         if not User.query.filter_by(username="tech1").first():
             db.session.add(User(
             username="tech1",
+            email="tech1@example.email",
             password_hash=generate_password_hash("password123"),
             role="tech"
         ))
         if not User.query.filter_by(username="user1").first():
             db.session.add(User(
             username="user1",
+            email="user1@example.email",
             password_hash=generate_password_hash("password123"),
             role="user"
         ))
         db.session.commit()
-    app.run(debug="True")
+    app.run(debug=True)
