@@ -204,21 +204,4 @@ def my_tickets():
 
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        if not User.query.filter_by(username="tech1").first():
-            db.session.add(User(
-            username="tech1",
-            email="tech1@example.email",
-            password_hash=generate_password_hash("password123"),
-            role="tech"
-        ))
-        if not User.query.filter_by(username="user1").first():
-            db.session.add(User(
-            username="user1",
-            email="user1@example.email",
-            password_hash=generate_password_hash("password123"),
-            role="user"
-        ))
-        db.session.commit()
     app.run(debug=True)
