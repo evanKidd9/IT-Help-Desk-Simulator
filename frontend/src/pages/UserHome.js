@@ -2,104 +2,154 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-function TicketCard({t}) {
-    const progress = t.progress ?? 0;
+function TicketCard({ t }) {
+  const progressNum = Number(t?.progress);
+  const progress = Number.isFinite(progressNum) ? progressNum : 0;
 
-    return (
-        <div style={{ border: "1px #ddd", padding: 12, marginBottom: 10 }}>
-            <div style={{ diplay: "flex", justifyContent: "space-between"}}>
-                <strong>#{t.id} - {t.title}</strong>
-                <span>{t.status}</span>
-            </div>
-            <div style={{ marginTop: 6 }}>
-                Priority: {t.priority}
-            </div>
-            <div style={{ marginTop: 8 }}>
-                Progress: {progress}%
-                <div style={{ height: 10, border: "1px solid #ccc", marginTop: 6, width: "100%" }}>
-                    <div style={{ height: "100%", width: `${progress}%`, background: "#4caf50"}}>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div
+      style={{
+        border: "1px solid #ddd",
+        padding: 12,
+        marginBottom: 12,
+        borderRadius: 12,
+        boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
+        background: "#fff",
+      }}
+    >
+      <div>
+        Name: <strong>{t.title}</strong>
+      </div>
+
+      <div style={{ marginTop: 6 }}>
+        Status: <strong>{t.status}</strong>
+      </div>
+
+      <div style={{ marginTop: 6 }}>
+        Priority: <strong>{t.priority}</strong>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        Progress: <strong>{progress}%</strong>
+        <div
+          style={{
+            height: 10,
+            border: "1px solid #ccc",
+            marginTop: 6,
+            width: "100%",
+            borderRadius: 999,
+            overflow: "hidden",
+            background: "#f3f3f3",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background: "#4caf50",
+            }}
+          />
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
-
-
 function UserHome() {
-    const username = localStorage.getItem("username") || "user";
-    
-    const [tickets, setTickets] = useState([]);
-    const [err, setErr] = useState("");
-    const [loading, setLoading] = useState(true);
+  const username = localStorage.getItem("username") || "user";
 
-    useEffect(() => {
-        async function loadTickets() {
-            setErr("");
-            setLoading(true);
+  const [tickets, setTickets] = useState([]);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
 
-            const token = localStorage.getItem("token");
-            if (!token) {
-                setErr("Not logged in");
-                setLoading(false);
-                return;
-            }
+  useEffect(() => {
+    async function loadTickets() {
+      setErr("");
+      setLoading(true);
 
-            try {
-                const res = await fetch("http://127.0.0.1:5000/api/tickets/mine", {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    setErr(data.error || "Failed to load tickets");
-                    return;
-                }
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setErr("Not logged in");
+        setLoading(false);
+        return;
+      }
 
-                setTickets(data.items || []);
-            }   catch {
-                setErr("Network error. Flask server may not be running.");
-            } finally {
-                setLoading(false);
-            }
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/tickets/mine", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setErr(data.error || "Failed to load tickets");
+          return;
         }
 
-        loadTickets();
-    }, []);
+        setTickets(data.items || []);
+      } catch {
+        setErr("Network error. Flask server may not be running.");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return (
-        <div tyle={{ padding: 24 }}>
-            <h1>User Portal</h1>
+    loadTickets();
+  }, []);
 
-            <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-                <div style={{ flex: "0 0 280px", border: "1px solid #ddd", padding: 12 }}>
-                    <p><strong>Welcome, {username}</strong></p>
-                    <p>
-                        <Link to="/user/submit-ticket">Submit a new Ticket</Link>
-                    </p>
-                    <p style={{ flex: 1 , opacity: 0.8}}>
-                        More functionality will be added here later
-                    </p>
-                </div>
+  return (
+    <div style={{ padding: 24, background: "#fafafa", minHeight: "100vh" }}>
+      <h1 style={{ textAlign: "center", marginTop: 0 }}>User Portal</h1>
 
-                {/* Tickets list */}
-                <div style={{ flex: 1 }}>
-                    <h2 style={{ marginTop: 0 }}>My Tickets</h2>
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        <div
+          style={{
+            width: 450,
+            border: "1px solid #ddd",
+            padding: 12,
+            borderRadius: 12,
+            background: "#fff",
+            position: "sticky",
+            top: 16,
+          }}
+        >
+          <h2>Welcome, {username}</h2>
 
-                    {loading && <p>Loading ...</p>}
-                    {err ** <p style={{ color: "crimson" }}>{err}</p>}
+          <p style={{ marginTop: 8 }}>
+            <Link to="/user/submit-ticket">Submit a new Ticket</Link>
+          </p>
 
-                    {!loading && !err && tickets.length === 0 && (
-                        <p>You have no tickets yet! Submit one to get started!</p>
-                    )}
-
-                    {tickets.map((t) => (
-                        <TicketCard key={t.id} t={t} />
-                    ))}
-                </div>
-            </div>
+          <p style={{ opacity: 0.8, fontSize: 17, marginTop: 12 }}>
+            More functionality will be added here later
+          </p>
         </div>
-    );
+
+        <div
+          style={{
+            flex: 1,
+            border: "1px solid #ddd",
+            borderRadius: 16,
+            padding: 16,
+            background: "#fff",
+            boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>My Tickets</h2>
+
+          {loading && <p>Loading ...</p>}
+          {err && <p style={{ color: "crimson" }}>{err}</p>}
+
+          {!loading && !err && tickets.length === 0 && (
+            <p>You have no tickets yet! Submit one to get started!</p>
+          )}
+
+          {tickets.map((t) => (
+            <TicketCard key={t.id} t={t} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default UserHome;
