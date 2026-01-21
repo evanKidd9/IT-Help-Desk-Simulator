@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from models import db, User, Ticket
 from functools import wraps
 from flask_migrate import Migrate
@@ -28,6 +29,7 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$") # for validating email input
 
+# Authentication function for roles
 def require_auth(required_role=None):
     def decorator(fn):
         @wraps(fn)
@@ -69,6 +71,7 @@ def me():
 def health():
     return jsonify(status="ok")
 
+# Log in for users and techs
 @app.post("/api/auth/login")
 def login():
     data = request.get_json(silent=True) or {}
@@ -96,6 +99,7 @@ def login():
 
     return jsonify(token=token, role=user.role, username=user.username)
 
+# Sign up for users
 @app.post("/api/auth/signup")
 def signup():
     data = request.get_json(silent=True) or {}
@@ -143,6 +147,7 @@ def signup():
     
     return jsonify(message="Account successfully created!! You may log in now")
 
+# Ticket creation for users
 @app.post("/api/tickets")
 @require_auth("user")
 def create_ticket():
@@ -180,14 +185,12 @@ def create_ticket():
         }
     ), 201
 
+# Ticket viewing for individual users
 @app.get("/api/tickets/mine")
 @require_auth("user")
 def my_tickets():
     tickets = (
-        Ticket.query
-        .filter_by(created_by=g.user_id)
-        .order_by(Ticket.id.desc())
-        .all()
+        Ticket.query.filter_by(created_by=g.user_id).order_by(Ticket.id.desc()).all()
     )
 
     return jsonify(items=[
@@ -202,6 +205,99 @@ def my_tickets():
         for t in tickets
     ]), 200
 
+# Ticket viewing for techs
+@app.get("/api/tickets/tech")
+@require_auth("tech")
+def tech_list_tickets():
+    Creator = aliased(User)
+    Assignee = aliased(User)
+
+    rows = (
+        db.session.query(Ticket, Creator.username, Assignee.username)
+        .join(Creator, Ticket.created_by == Creator.id)
+        .outerjoin(Assignee, Ticket.assigned_to == Assignee.id)
+        .order_by(Creator.username.asc(), Ticket.id.desc()).all()
+    )
+
+    items = []
+    for ticket, creator_username, assignee_username in rows:
+        items.append({
+            "id": ticket.id,
+            "title": ticket.title,
+            "description": ticket.description,
+            "priority": ticket.priority,
+            "status": ticket.status,
+            "progress": ticket.progress,
+            "created_by": ticket.created_by,
+            "created_by_username": creator_username,
+            "assigned_to": ticket.assigned_to,
+            "assigned_to_username": assignee_username,
+        })
+    return jsonify(items=items), 200
+
+# Techs assign themselves to tickets before editing
+@app.patch("/api/tech/tickets/<int:ticket_id>/assign")
+@require_auth("tech")
+def tech_assign_ticket():
+    ticket = Ticket.query.get(ticket.id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    if ticket.assigned_to is not None and ticket.assigned_to != g.user_id:
+        return jsonify(error="Ticket already assigned to another technician"), 404
+    
+    ticket.assigned_to = g.user_id
+    db.session.commit()
+
+    return jsonify(message="Ticket has been assigned to you!", ticket_id=ticket.id,
+                   assigned_to=ticket.assigned_to), 200
+
+# Editing tickets for assigned techs only
+@app.patch("/api/tech/tickets/<int:ticket_id>/assign")
+@require_auth("tech")
+def tech_update_ticket():
+    ticket = Ticket.query.get(ticket.id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    if ticket.assigned_to is not None and ticket.assigned_to != g.user_id:
+        return jsonify(error="Ticket already assigned to another technician"), 404
+    
+    data = request.get_json(silent=True) or {}
+
+    if "priority" in data:
+        priority = (data.get("priority") or "").strip()
+        if priority not in { "Low", "Medium", "Large" }:
+            return jsonify(error="Priority must be Low, Medium, or High"), 400
+        ticket.priority = priority
+
+    if "progress" in data:
+        try:
+            progress = int(data.get("progress"))
+        except (TypeError, ValueError):
+            return jsonify(error="Progress must be an integer"), 400
+        
+        if progress < 0 or progress > 100:
+            return jsonify(error="Progress must be between 0 - 100"), 400
+        
+        ticket.progress = progress
+
+        if progress == 0:
+            ticket.status = "Open"
+        elif progress == 100:
+            ticket.status = "Complete"
+        else:
+            ticket.status = "In Progress"
+
+    db.session.commit()
+
+    return jsonify(message="Ticket updated!", ticket={
+        "id": ticket.id,
+        "priority": ticket.priority,
+        "progress": ticket.progress,
+        "status": ticket.status,
+        "assigned_to": ticket.assigned_to
+    }), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
