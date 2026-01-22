@@ -299,5 +299,21 @@ def tech_update_ticket(ticket_id):
         "assigned_to": ticket.assigned_to
     }), 200
 
+@app.patch("/api/tech/tickets/<int:ticket_id>/unassign")
+@require_auth("tech")
+def tech_unassign_ticket(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    if ticket.assigned_to != g.user_id:
+        return jsonify(error="You already aren't assigned to this ticket"), 403
+    
+    ticket.assigned_to = None
+    db.session.commit()
+
+    return jsonify(message="Unassigned!", ticket_id=ticket.id,
+                    assigned_to=ticket.assigned_to), 200
+
 if __name__ == "__main__":
     app.run(debug=True)

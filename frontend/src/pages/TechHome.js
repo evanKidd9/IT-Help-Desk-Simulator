@@ -8,7 +8,9 @@ function TechHome() {
 
     const [items, setItems] = useState([]);
     const [err, setErr] = useState("");
+    const [ticketMsg, setTicketMsg] = useState({});
     const [loading, setLoading] = useState(true);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     async function loadTickets() {
         setErr("");
@@ -43,11 +45,29 @@ function TechHome() {
     }, []);
 
     function handleLogout() {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        localStorage.removeItem("username");
-        localStorage.removeItem("user_id");
-        nav("/login");
+        setLoggingOut(true);
+        setErr("");
+        setTicketMsg({});
+
+        setTimeout(() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            localStorage.removeItem("username");
+            localStorage.removeItem("user_id");
+            nav("/login");
+        }, 800);
+    }
+
+    function showTicketMsg(ticketId, text, ms = 1500) {
+        setTicketMsg((prev) => ({ ...prev, [ticketId]: text }));
+
+        setTimeout(() => {
+            setTicketMsg((prev) => {
+            const copy = { ...prev };
+            delete copy[ticketId];
+            return copy;
+          });
+        }, ms);
     }
 
     async function assignToMe(ticketId) {
@@ -67,6 +87,7 @@ function TechHome() {
             }
 
             await loadTickets();
+            showTicketMsg(ticketId, "Assigned to ticket! Don't let the customer down!!");
         } catch {
             setErr("Network error while assigning ticket.");
         }
@@ -94,6 +115,28 @@ function TechHome() {
             setErr("Network error while updating ticket.");
         }
     }
+    
+    async function unassignMe(ticketId) {
+      setErr("");
+      const token = localStorage.getItem("token");
+
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/api/tech/tickets/${ticketId}/unassign`, {
+          method: "PATCH", headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok) {
+          setErr(data.error || "Failed to unassign ticket");
+          return;
+        }
+
+        await loadTickets();
+        showTicketMsg(ticketId, "Unassigned from ticket. Couldn't hack it, huh?");
+      } catch {
+        setErr("Network error while unassigning ticket");
+      }
+    }
 
   return (
     <div style={{ padding: 24, background: "#fafafa", minHeight: "100vh" }}>
@@ -117,6 +160,13 @@ function TechHome() {
             border: "1px solid #ccc", background: "#f30f0f", cursor: "pointer", color: "#fff" }}>
             Logout
           </button>
+
+          {loggingOut && (
+            <p style={{ color: "green", textAlign: "center", marginTop: 8 }}>
+                Logging out now...
+            </p>
+          )}
+          
         </div>
 
         {/* Tickets bubble */}
@@ -140,16 +190,8 @@ function TechHome() {
             const canEdit = t.assigned_to === myId;
 
             return (
-              <div
-                key={t.id}
-                style={{
-                  border: "1px solid #ddd",
-                  padding: 12,
-                  marginBottom: 12,
-                  borderRadius: 12,
-                  background: "#fff",
-                }}
-              >
+              <div key={t.id} style={{ border: "1px solid #ddd", padding: 12,
+                  marginBottom: 12, borderRadius: 12, background: "#fff",}}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <strong>{t.title}</strong>
                   <span style={{ opacity: 0.8 }}>User: <strong>{t.created_by_username}</strong></span>
@@ -191,16 +233,22 @@ function TechHome() {
                       background: "#1976d2", color: "#fff", cursor: "pointer",
                       fontWeight: 600}}>Assign to me</button>
                 )}
+                
+                {canEdit && (<button onClick={() => unassignMe(t.id)} style={{
+                  marginTop: 10, padding: "8px 12px", borderRadius: 8, border: "none",
+                  background: "#e60909", color: "#fff", cursor: "pointer",
+                  fontWeight: 600}}>Unassign me</button>
+                )}
 
-                {t.assigned_to != null && !canEdit && (
-                  <p style={{ marginTop: 10, color: "#666" }}>
-                    Read-only! Ticket is assigned to another technician.
+                {ticketMsg[t.id] && (
+                  <p style={{ color: "green", marginTop: 8 }}>
+                    {ticketMsg[t.id]}
                   </p>
                 )}
 
-                {canEdit && (
-                  <p style={{ marginTop: 10, color: "green" }}>
-                    You are assigned! Don't disappoint the customer!!
+                {!loggingOut && t.assigned_to != null && !canEdit && (
+                  <p style={{ marginTop: 10, color: "#666" }}>
+                    Read-only! Ticket is assigned to another technician.
                   </p>
                 )}
               </div>
