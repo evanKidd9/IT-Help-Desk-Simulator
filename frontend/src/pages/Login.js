@@ -30,9 +30,10 @@ function Login() {
             localStorage.setItem("token", data.token);
             localStorage.setItem("role", data.role);
             localStorage.setItem("username", data.username);
+            localStorage.setItem("user_id", data.id);
 
             // route based on role
-            if (data.role == "tech") nav("/tech");
+            if (data.role === "tech") nav("/tech");
             else nav("/user");
         } catch (e2) {
             setErr("Network error!! Check if Flask server is running");

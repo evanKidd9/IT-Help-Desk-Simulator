@@ -97,7 +97,7 @@ def login():
     }
     token = jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
 
-    return jsonify(token=token, role=user.role, username=user.username)
+    return jsonify(token=token, role=user.role, username=user.username, id=user.id)
 
 # Sign up for users
 @app.post("/api/auth/signup")
@@ -206,7 +206,7 @@ def my_tickets():
     ]), 200
 
 # Ticket viewing for techs
-@app.get("/api/tickets/tech")
+@app.get("/api/tech/tickets")
 @require_auth("tech")
 def tech_list_tickets():
     Creator = aliased(User)
@@ -238,8 +238,8 @@ def tech_list_tickets():
 # Techs assign themselves to tickets before editing
 @app.patch("/api/tech/tickets/<int:ticket_id>/assign")
 @require_auth("tech")
-def tech_assign_ticket():
-    ticket = Ticket.query.get(ticket.id)
+def tech_assign_ticket(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
     if not ticket:
         return jsonify(error="Ticket not found"), 404
     
@@ -253,21 +253,21 @@ def tech_assign_ticket():
                    assigned_to=ticket.assigned_to), 200
 
 # Editing tickets for assigned techs only
-@app.patch("/api/tech/tickets/<int:ticket_id>/assign")
+@app.patch("/api/tech/tickets/<int:ticket_id>")
 @require_auth("tech")
-def tech_update_ticket():
-    ticket = Ticket.query.get(ticket.id)
+def tech_update_ticket(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
     if not ticket:
         return jsonify(error="Ticket not found"), 404
     
-    if ticket.assigned_to is not None and ticket.assigned_to != g.user_id:
-        return jsonify(error="Ticket already assigned to another technician"), 404
+    if ticket.assigned_to != g.user_id:
+        return jsonify(error="Ticket already assigned to another technician"), 403
     
     data = request.get_json(silent=True) or {}
 
     if "priority" in data:
         priority = (data.get("priority") or "").strip()
-        if priority not in { "Low", "Medium", "Large" }:
+        if priority not in { "Low", "Medium", "High" }:
             return jsonify(error="Priority must be Low, Medium, or High"), 400
         ticket.priority = priority
 
@@ -285,7 +285,7 @@ def tech_update_ticket():
         if progress == 0:
             ticket.status = "Open"
         elif progress == 100:
-            ticket.status = "Complete"
+            ticket.status = "Completed"
         else:
             ticket.status = "In Progress"
 
