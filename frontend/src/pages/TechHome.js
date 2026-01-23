@@ -11,6 +11,7 @@ function TechHome() {
     const [ticketMsg, setTicketMsg] = useState({});
     const [loading, setLoading] = useState(true);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [expanded, setExpanded] = useState(() => new Set());
 
     async function loadTickets() {
         setErr("");
@@ -68,6 +69,22 @@ function TechHome() {
             return copy;
           });
         }, ms);
+    }
+
+    function showDetails(ticketId) {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.add(ticketId);
+        return next;
+      });
+    }
+
+    function hideDetails(ticketId) {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.delete(ticketId);
+        return next;
+      });
     }
 
     async function assignToMe(ticketId) {
@@ -170,16 +187,8 @@ function TechHome() {
         </div>
 
         {/* Tickets bubble */}
-        <div
-          style={{
-            flex: 1,
-            border: "1px solid #ddd",
-            borderRadius: 16,
-            padding: 16,
-            background: "#fff",
-            boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
-          }}
-        >
+        <div style={{ flex: 1, border: "1px solid #ddd", borderRadius: 16,
+            padding: 16, background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.06)"}}>
           <h2 style={{ marginTop: 0 }}>All Tickets</h2>
 
           {loading && <p>Loading...</p>}
@@ -191,7 +200,7 @@ function TechHome() {
 
             return (
               <div key={t.id} style={{ border: "1px solid #ddd", padding: 12,
-                  marginBottom: 12, borderRadius: 12, background: "#fff",}}>
+                  marginBottom: 12, borderRadius: 12, background: "#fff"}}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <strong>{t.title}</strong>
                   <span style={{ opacity: 0.8 }}>User: <strong>{t.created_by_username}</strong></span>
@@ -238,6 +247,40 @@ function TechHome() {
                   marginTop: 10, padding: "8px 12px", borderRadius: 8, border: "none",
                   background: "#e60909", color: "#fff", cursor: "pointer",
                   fontWeight: 600}}>Unassign me</button>
+                )}
+
+                {/* Ticket details buttons */}
+                <div style={{ marginTop: 10, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {!expanded.has(t.id) ? (
+                    <button onClick={() => showDetails(t.id)} style={{
+                      padding: "8px 12px", borderRadius: 8, border: "none", color: "#fff",
+                      background: "#00ffee", cursor: "pointer", fontWeight: 600
+                    }}>Show Ticket Details</button>
+                  ) : (
+                    <button onClick={() => hideDetails(t.id)} style={{
+                      padding: "8px 12px", borderRadius: 8, border: "none", color: "#000000",
+                      background: "#fdfd00", cursor: "pointer", fontWeight: 600
+                    }}>Hide Ticket Details</button>
+                  )}
+                </div>
+
+                {/* Ticket details */}
+                {expanded.has(t.id) && (
+                  <div style={{ marginTop: 10, padding: 10, borderRadius: 10, 
+                    background: "#fafafa", border: "1px solid #eee"
+                  }}>
+                    <div style={{ marginBottom: 8, }}>
+                      <strong>Description</strong>
+                      <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>
+                        {t.description}
+                      </div>
+                    </div>
+
+                    <div style={{ opacity: 0.85 }}>
+                      <strong>Created on: </strong>
+                      {t.created_at ? new Date(t.created_at).toLocaleString() : "Unknown" }
+                    </div>
+                  </div>
                 )}
 
                 {ticketMsg[t.id] && (

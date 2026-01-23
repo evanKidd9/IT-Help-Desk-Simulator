@@ -232,6 +232,7 @@ def tech_list_tickets():
             "created_by_username": creator_username,
             "assigned_to": ticket.assigned_to,
             "assigned_to_username": assignee_username,
+            "created_at": ticket.created_at.isoformat() if ticket.created_at else None
         })
     return jsonify(items=items), 200
 
