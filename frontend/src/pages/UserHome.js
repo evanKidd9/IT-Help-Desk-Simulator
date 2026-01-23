@@ -193,7 +193,8 @@ function UserHome() {
           {showDelete && (
             <div style={{ marginTop: 12, padding: 10, border: "1px solid #f2c2c2", borderRadius: 10 }}>
               <p style={{marginTop: 0, color: "#b00020", fontWeight: 600 }}>
-                Warning: This will permanently delete your account
+                All information associated with this account will be lost. If you still wish to
+                proceed, please type "DELETE" to confirm.
               </p>
               <p style={{ marginTop: 0, opacity: 0.8 }}>
                 Type <strong>DELETE</strong> to confirm deletion

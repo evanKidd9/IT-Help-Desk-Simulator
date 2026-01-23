@@ -3,7 +3,7 @@ from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
-from models import db, User, Ticket
+from models import db, User, Ticket, TicketNote
 from functools import wraps
 from flask_migrate import Migrate
 import jwt
@@ -343,6 +343,48 @@ def tech_unassign_ticket(ticket_id):
 
     return jsonify(message="Unassigned!", ticket_id=ticket.id,
                     assigned_to=ticket.assigned_to), 200
+
+@app.get("api/tickets/<int:ticket_id>/notes")
+@require_auth()
+def get_ticket_notes(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    # makes sure users can view their own ticket notes
+    if g.role == "user" and ticket.created_by != g.user_id:
+        return jsonify(error="Forbidden! Not your ticket!")
+    
+    Author = aliased(User)
+
+    q = (
+        db.session.query(TicketNote, Author.username, Author.role)
+        .join(Author, TicketNote.author_id == Author.id)
+        .filter(TicketNote.ticket_id == ticket_id)
+        .order_by(TicketNote.created_at.asc(), TicketNote.id.asc())
+    )
+
+    # don't let users see internal notes
+    if g.role == "user":
+        q = q.filter(TicketNote.is_internal == False)
+
+    rows = q.all()
+
+    items = []
+    for note, author_username, author_role in rows:
+        items.append({
+            "id": note.id,
+            "ticket_id": note.ticket_id,
+            "note": note.note,
+            "is_internal": note.is_internal,
+            "created_at": note.created_at.isoformat() if note.created_at else None,
+            "author_id": note.author_id,
+            "author_username": author_username,
+            "author_role": author_role,
+        })
+    return jsonify(items=items), 200
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

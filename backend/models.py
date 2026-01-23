@@ -10,6 +10,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    profile = db.Column(db.Text, nullable=False)
     role = db.Column(db.String(10), nullable=False)
 
 class Ticket(db.Model):
@@ -32,3 +33,4 @@ class TicketNote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     note = db.Column(db.Text, nullable=False)
     is_internal = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
