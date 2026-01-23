@@ -147,6 +147,34 @@ def signup():
     
     return jsonify(message="Account successfully created!! You may log in now")
 
+# Account deletion
+@app.delete("/api/me")
+@require_auth()
+def delete_account():
+    data = request.get_json(silent=True) or {}
+    confirm = (data.get("confirm") or "").strip()
+
+    if confirm != "DELETE":
+        return jsonify(error="Type 'DELETE' to confirm account deletion"), 400
+    
+    user = User.query.get(g.user_id)
+    if not user:
+        return jsonify(error="User not found"), 404
+    
+    # for tech, unassign them from all tickets
+    Ticket.query.filter_by(assigned_to=user.id).update(
+        {"assigned_to": None}, synchronize_session=False
+    )
+
+    # for user, delete any tickets they created
+    Ticket.query.filter_by(created_by=user.id).delete(synchronize_session=False)
+
+    # delete the user
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify(message="Account successfully deleted")
+
 # Ticket creation for users
 @app.post("/api/tickets")
 @require_auth("user")

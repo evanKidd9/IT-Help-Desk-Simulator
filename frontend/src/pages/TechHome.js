@@ -13,6 +13,12 @@ function TechHome() {
     const [loggingOut, setLoggingOut] = useState(false);
     const [expanded, setExpanded] = useState(() => new Set());
 
+    const [showDelete, setShowDelete] = useState(false);
+    const [deleteText, setDeleteText] = useState("");
+    const [deleteMsg, setDeleteMsg] = useState("");
+    const [deleteErr, setDeleteErr] = useState("");
+    const [deleting, setDeleting] = useState(false);
+
     async function loadTickets() {
         setErr("");
         setLoading(true);
@@ -58,6 +64,56 @@ function TechHome() {
             nav("/login");
         }, 800);
     }
+
+    async function deleteAccount() {
+  setDeleteErr("");
+  setDeleteMsg("");
+
+  if (deleteText.trim() !== "DELETE") {
+    setDeleteErr(`All information associated with this account will be lost. If you still wish to
+      proceed, please type "DELETE" to confirm.`);
+    return;
+  }
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    setDeleteErr("Not logged in.");
+    return;
+  }
+
+  setDeleting(true);
+
+  try {
+    const res = await fetch("http://127.0.0.1:5000/api/me", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ confirm: "DELETE" }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setDeleteErr(data.error || "Failed to delete account.");
+      setDeleting(false);
+      return;
+    }
+
+    setDeleteMsg("Account deleted. Redirecting to login...");
+    // clear auth and redirect after a short pause
+    setTimeout(() => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("username");
+      localStorage.removeItem("user_id");
+      window.location.href = "/login";
+    }, 1000);
+  } catch {
+    setDeleteErr("Network error while deleting account.");
+    setDeleting(false);
+  }
+}
 
     function showTicketMsg(ticketId, text, ms = 1500) {
         setTicketMsg((prev) => ({ ...prev, [ticketId]: text }));
@@ -172,16 +228,53 @@ function TechHome() {
                 Load Tickets
           </button>
 
+          {/* Log out */}
           <button onClick={handleLogout} style={{
             marginTop: 16, width: "100%", padding: "8px 12px", borderRadius: 8,
             border: "1px solid #ccc", background: "#f30f0f", cursor: "pointer", color: "#fff" }}>
             Logout
           </button>
-
           {loggingOut && (
             <p style={{ color: "green", textAlign: "center", marginTop: 8 }}>
                 Logging out now...
             </p>
+          )}
+
+          {/* Delete account */}
+          <button onClick={() => {
+            setShowDelete((v) => !v);
+            setDeleteErr("");
+            setDeleteMsg("");
+            setDeleteText("");
+          }} style={{ marginTop: 12, width: "100%", padding: "8px 12px", borderRadius: 8,
+            border: "1px solid #ccc", background: "#0008fa", color: "#fff",
+            cursor: "pointer", fontWeight: 600
+          }}>Delete Account</button>
+
+          {showDelete && (
+            <div style={{ marginTop: 12, padding: 10, border: "1px solid #f2c2c2", borderRadius: 10 }}>
+              <p style={{marginTop: 0, color: "#b00020", fontWeight: 600 }}>
+                Warning: This will permanently delete your account
+              </p>
+              <p style={{ marginTop: 0, opacity: 0.8 }}>
+                Type <strong>DELETE</strong> to confirm deletion
+              </p>
+
+              <input value={deleteText} onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="Type 'DELETE'" 
+                style={{ width: "100%", padding: 8, marginTop: 6 }}
+                autoComplete="off" disabled={deleting}
+              />
+
+              {deleteErr && <p style={{ color: "crimson", marginTop: 8 }}>{deleteErr}</p>}
+              {deleteMsg && <p style={{ color: "green", marginTop: 8 }}>{deleteMsg}</p>}
+
+              <button onClick={deleteAccount} disabled={deleting} style={{
+                marginTop: 10, width: "100%", padding: "10px 12px", borderRadius: 8,
+                border: "none", background: "#b00020", color: "#fff", 
+                cursor: "pointer", fontWeight: 600, opacity: deleting ? 0.7 : 1
+              }}>{deleting ? "Deleting ..." : "Confirm deletion"}</button>
+            </div>
           )}
           
         </div>
