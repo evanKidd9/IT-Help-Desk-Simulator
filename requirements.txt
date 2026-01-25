@@ -1,2 +1,10 @@
-If you close the project, you must reactivate the virtual environment with
-    .\venv\Scripts\Activate.ps1
+Backend dependencies for the project:
+
+Flask
+Flask-Cors
+Flask-SQLAlchemy
+Flask-Migrate
+PyJWT
+Werkzeug
+SQLAlchemy
+alembic
