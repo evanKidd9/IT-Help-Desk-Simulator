@@ -351,6 +351,23 @@ def tech_unassign_ticket(ticket_id):
                     assigned_to=ticket.assigned_to), 200
 
 # Ticket Deletion (techs only)
+@app.delete("/api/tech/tickets/<int:ticket_id>")
+@require_auth("tech")
+def tech_delete_ticket(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    if (ticket.progress or 0) != 100:
+        return jsonify(error="Ticket must be 100% to close"), 400
+    
+    # Delete ticket notes first
+    TicketNote.query.filter_by(ticket_id=ticket_id).delete(synchronize_session=False)
+    
+    db.session.delete(ticket)
+    db.session.commit()
+    return jsonify(message="Ticket has been deleted and closed"), 200
+
 
 @app.get("/api/tickets/<int:ticket_id>/notes")
 @require_auth()

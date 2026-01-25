@@ -10,27 +10,6 @@ export default function TicketNotes({ticketId, role}) {
     const [err, setErr] = useState("");
     const [posting, setPosting] = useState(false);
 
-    async function loadNotes() {
-        setErr("");
-        setLoading(true);
-
-        try {
-            const res = await fetch(`http://127.0.0.1:5000/api/tickets/${ticketId}/notes`, {
-                headers: {Authorization: `Bearer ${token}`}
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setErr(data.error || "Failed to load notes");
-                return;
-            }
-            setNotes(data.items || [])
-        } catch {
-            setErr("Network error loading notes");
-        } finally {
-            setLoading(false);
-        }
-    }
-
     useEffect(() => {
   let cancelled = false;
 

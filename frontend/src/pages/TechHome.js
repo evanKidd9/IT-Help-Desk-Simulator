@@ -67,54 +67,51 @@ function TechHome() {
     }
 
     async function deleteAccount() {
-  setDeleteErr("");
-  setDeleteMsg("");
+      setDeleteErr("");
+      setDeleteMsg("");
 
-  if (deleteText.trim() !== "DELETE") {
-    setDeleteErr(`All information associated with this account will be lost. If you still wish to
-      proceed, please type "DELETE" to confirm.`);
-    return;
-  }
+      if (deleteText.trim() !== "DELETE") {
+        setDeleteErr(`All information associated with this account will be lost. If you still wish to
+        proceed, please type "DELETE" to confirm.`);
+        return;
+      }
 
-  const token = localStorage.getItem("token");
-  if (!token) {
-    setDeleteErr("Not logged in.");
-    return;
-  }
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setDeleteErr("Not logged in.");
+        return;
+      }
 
-  setDeleting(true);
+      setDeleting(true);
 
-  try {
-    const res = await fetch("http://127.0.0.1:5000/api/me", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ confirm: "DELETE" }),
-    });
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/me", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`},
+          body: JSON.stringify({ confirm: "DELETE" })
+        });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setDeleteErr(data.error || "Failed to delete account.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteErr(data.error || "Failed to delete account.");
+        setDeleting(false);
+        return;
+      }
+
+      setDeleteMsg("Account deleted. Redirecting to login...");
+
+      setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("username");
+        localStorage.removeItem("user_id");
+        window.location.href = "/login";
+      }, 1000);
+    } catch {
+      setDeleteErr("Network error while deleting account.");
       setDeleting(false);
-      return;
     }
-
-    setDeleteMsg("Account deleted. Redirecting to login...");
-    // clear auth and redirect after a short pause
-    setTimeout(() => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      localStorage.removeItem("username");
-      localStorage.removeItem("user_id");
-      window.location.href = "/login";
-    }, 1000);
-  } catch {
-    setDeleteErr("Network error while deleting account.");
-    setDeleting(false);
   }
-}
 
     function showTicketMsg(ticketId, text, ms = 1500) {
         setTicketMsg((prev) => ({ ...prev, [ticketId]: text }));
@@ -142,6 +139,29 @@ function TechHome() {
         next.delete(ticketId);
         return next;
       });
+    }
+
+    async function closeTicket(ticketId) {
+      setErr("");
+      const token = localStorage.getItem("token");
+
+      try {
+        const res = await fetch( `http://127.0.0.1:5000/api/tech/tickets/${ticketId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErr(data.error || "Failed to close ticket.");
+          return;
+        }
+
+        setItems((prev) => prev.filter((x) => x.id !== ticketId));
+        showTicketMsg(ticketId, "Ticket closed");
+      } catch {
+        setErr("Network error closing ticket");
+      }
     }
 
     async function assignToMe(ticketId) {
@@ -330,6 +350,16 @@ function TechHome() {
                     </div>
                   </div>
                 </div>
+
+                {/* Close Ticket button */}
+                <button onClick={() => closeTicket(t.id)} disabled={!canEdit || progress !== 100} style={{
+                  marginTop: 10, padding: "8px 12px", border: "none", borderRadius: 8,
+                  background: progress === 100 ? "#2e7d32" : "#9e9e9e", color: "#fff",
+                  cursor: progress === 100 ? "pointer" : "not-allowed", fontWeight: 600,
+                  opacity: progress === 100 ? 1 : 0.7
+                }}>
+                  Close Ticket
+                </button>
 
                 {t.assigned_to == null && (
                   <button onClick={() => assignToMe(t.id)} style={{
