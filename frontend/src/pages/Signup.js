@@ -8,6 +8,7 @@ function Signup() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [profile, setProfile] = useState("");
 
     const [msg, setMsg] = useState("");
     const [err, setErr] = useState("");
@@ -45,6 +46,11 @@ function Signup() {
             return;
         }
 
+        if (profile.trim().length < 15) {
+            setErr("Profile must be at least 15 characters")
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -58,6 +64,7 @@ function Signup() {
                     password,
                     isTech,
                     techCode: techCode.trim(),
+                    profile: profile.trim()
                 }),
             });
 
@@ -112,6 +119,16 @@ function Signup() {
                         type="password"
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="new-password"/>
+
+                <div style={{ marginBottom: 12 }}>
+                    <label>Profile</label>
+                    <input
+                        style={{ width: "100%", padding: 8 }}
+                        value={profile}
+                        rows={3}
+                        onChange={(e) => setProfile(e.target.value)}
+                        placeholder="Tell us a little about yourself ..."/>
+                </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
                     <label>Confirm Password</label>

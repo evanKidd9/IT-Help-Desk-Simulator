@@ -1,8 +1,9 @@
 // Home page for users
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import TicketNotes from "../components/TicketNotes";
 
-function TicketCard({ t }) {
+function TicketCard({ t, isExpanded, onShow, onHide }) {
   const progressNum = Number(t?.progress);
   const progress = Number.isFinite(progressNum) ? progressNum : 0;
 
@@ -32,6 +33,42 @@ function TicketCard({ t }) {
           <div style={{ height: "100%", width: `${progress}%`, background: "#4caf50" }}/>
         </div>
       </div>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+            {!isExpanded ? (
+              <button onClick={() => onShow(t.id)} style={{
+                padding: "8px 12px", borderRadius: 8, border: "1px solid #ccc",
+                background: "#fafafa", cursor: "pointer", fontWeight: 600
+              }}>
+                Show Details
+              </button>
+              ) : (
+                <button onClick={() => onHide(t.id)} style={{
+                  padding: "8px 12px", borderRadius: 8, border: "1px solid #ccc",
+                background: "#f5f5f5", cursor: "pointer", fontWeight: 600
+                }}>
+                  Hide Details
+                </button>
+              )
+            }
+          </div>
+
+          {isExpanded && (
+            <div style={{ marginTop: 10, padding: 10, borderRadius: 10,
+              background: "#fafafa", border: "1px solid #eee"
+            }}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Description</strong>
+                <div style={{ opacity: 0.85 }}>
+                  <strong>Created on: </strong>
+                  {t.created_at ? new Date(t.created_at).toLocaleString() : "Unknown"}
+                </div>
+              </div>
+
+              {/* Ticket Notes Thread */}
+              <TicketNotes ticketId={t.id} role="user" />
+            </div>
+          )}
     </div>
   );
 }
@@ -51,14 +88,31 @@ function UserHome() {
   const [deleteErr, setDeleteErr] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [expanded, setExpanded] = useState(() => new Set());
+
+  function showDetails(ticketId) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(ticketId);
+      return next;
+    });
+  }
+
+  function hideDetails(ticketId) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.delete(ticketId);
+      return next;
+    });
+  }
+
   function handleLogout() {
     setLoggingOut(true);
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
     setTimeout(() => {
-        nav("/login");
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("username");
+      nav("/login");
     }, 900);
   }
 
@@ -229,6 +283,8 @@ function UserHome() {
         >
           <h2 style={{ marginTop: 0 }}>My Tickets</h2>
 
+          
+
           {loading && <p>Loading ...</p>}
           {err && <p style={{ color: "crimson" }}>{err}</p>}
 
@@ -237,7 +293,10 @@ function UserHome() {
           )}
 
           {tickets.map((t) => (
-            <TicketCard key={t.id} t={t} />
+            <TicketCard key={t.id} t={t} isExpanded={expanded.has(t.id)}
+              onShow={showDetails}
+              onHide={hideDetails}
+            />
           ))}
         </div>
       </div>

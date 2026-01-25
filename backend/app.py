@@ -106,6 +106,7 @@ def signup():
     username = (data.get("username") or "").strip()
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
+    profile = (data.get("profile") or "").strip()
 
     is_tech = bool(data.get("isTech"))
     tech_code = (data.get("techCode") or "").strip()
@@ -117,6 +118,8 @@ def signup():
         return jsonify(error="Please enter a valid email address"), 400
     if len(password) < 10:
         return jsonify(error="Password too short, must be at least 10 characters"), 400
+    if len(profile) < 15:
+        return jsonify(error="Profile is too short, must be at least 15 characters"), 400
     
     print("JSON received:", request.get_json())
     print("Expected tech code:", repr(app.config["TECH_INVITE_CODE"]))
@@ -133,7 +136,8 @@ def signup():
         username = username,
         email=email,
         password_hash = generate_password_hash(password),
-        role = role
+        role = role,
+        profile=profile
     )
 
     db.session.add(user)
@@ -228,7 +232,9 @@ def my_tickets():
             "priority": t.priority,
             "status": t.status,
             "progress": getattr(t, "progress", 0) or 0,
-            "created_by": t.created_by
+            "created_by": t.created_by,
+            "description": t.description,
+            "created_at": t.created_at.isoformat() if t.created_at else None
         }
         for t in tickets
     ]), 200
@@ -344,7 +350,9 @@ def tech_unassign_ticket(ticket_id):
     return jsonify(message="Unassigned!", ticket_id=ticket.id,
                     assigned_to=ticket.assigned_to), 200
 
-@app.get("api/tickets/<int:ticket_id>/notes")
+# Ticket Deletion (techs only)
+
+@app.get("/api/tickets/<int:ticket_id>/notes")
 @require_auth()
 def get_ticket_notes(ticket_id):
     ticket = Ticket.query.get(ticket_id)
@@ -384,7 +392,46 @@ def get_ticket_notes(ticket_id):
         })
     return jsonify(items=items), 200
 
+@app.post("/api/tickets/<int:ticket_id>/notes")
+@require_auth()
+def add_ticket_note(ticket_id):
+    ticket = Ticket.query.get(ticket_id)
+    if not ticket:
+        return jsonify(error="Ticket not found"), 404
+    
+    # makes sure users can view their own ticket notes
+    if g.role == "user" and ticket.created_by != g.user_id:
+        return jsonify(error="Forbidden! Not your ticket!")
+    
+    data = request.get_json(silent=True) or {}
+    text = (data.get("note") or "").strip()
 
+    if len(text) < 2:
+        return jsonify(error="Note too short"), 400
+    
+    # make sure only techs can create internal notes
+    is_internal = bool(data.get("is_internal")) if g.role == "tech" else False
+
+    new_note = TicketNote(
+        ticket_id=ticket_id,
+        author_id=g.user_id,
+        note=text,
+        is_internal=is_internal
+    )
+
+    db.session.add(new_note)
+    db.session.commit()
+
+    return jsonify(note={
+        "id": new_note.id,
+        "ticket_id": new_note.ticket_id,
+        "note": new_note.note,
+        "is_internal": new_note.is_internal,
+        "created_at": new_note.created_at.isoformat() if new_note.created_at else None,
+        "author_id": new_note.author_id,
+        "author_username": g.username,
+        "author_role": g.role
+    }), 201
 
 if __name__ == "__main__":
     app.run(debug=True)

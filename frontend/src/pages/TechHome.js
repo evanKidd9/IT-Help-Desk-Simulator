@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import TicketNotes from "../components/TicketNotes";
 
 function TechHome() {
     const nav = useNavigate();
@@ -374,6 +375,9 @@ function TechHome() {
                       <strong>Created on: </strong>
                       {t.created_at ? new Date(t.created_at).toLocaleString() : "Unknown" }
                     </div>
+
+                    {/* Ticket notes thread */}
+                    <TicketNotes ticketId={t.id} role="tech"/>
                   </div>
                 )}
 
