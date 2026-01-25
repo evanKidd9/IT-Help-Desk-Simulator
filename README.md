@@ -73,4 +73,25 @@ Each ticket contains a live message thread where:
 
 ### 1. Clone the Repository
 
+```bash
+git clone https://github.com/your-username/IT-Help-Desk-Simulator.git
+cd IT-Help-Desk-Simulator
+
+### 2. Backend Setup: Create and run virtual environment
+**cd backend**
+**python -m venv venv**
+**venv\Scripts\activate**
+
+In the environment, install the backend dependencies listed in requirements.txt
+
+To run the Flask server, run **python app.py**
+
+### 3. Frontend Setup
+In a second terminal, run:
+**cd frontend**
+**npm install**
+**npm start**
+
+## 🔐 Technician Accounts
+To create a technician account, use the following invite code: **DEV-TECH-CODE**
 
